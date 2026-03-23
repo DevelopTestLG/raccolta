@@ -1,6 +1,6 @@
 # Ciriè - Zona B - 2026/2027
 # Formato: GG/MM/AAAA Tipo1, Tipo2
-# Raccolte multiple separate da virgola  
+# Raccolte multiple separate da virgolak     
 
 02/01/2026 Organico
 03/01/2026 Indifferenziato
