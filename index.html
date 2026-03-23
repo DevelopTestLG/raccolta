@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Raccolta rifiuti</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #020617;
+      --card: rgba(15, 23, 42, 0.96);
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --border: rgba(148, 163, 184, 0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif; }
+
+    body {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+      background: radial-gradient(circle at top, #111827 0, #020617 55%);
+      color: var(--text);
+    }
+
+    .app { width: 100%; max-width: 420px; }
+
+    .card {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 20px 18px 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.7);
+      backdrop-filter: blur(18px);
+    }
+
+    /* ── header ── */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .title { font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }
+    .subtitle { font-size: 12px; color: var(--muted); }
+    .badge-small {
+      font-size: 11px; padding: 4px 10px;
+      border-radius: 999px; border: 1px solid rgba(148,163,184,0.5);
+      color: var(--muted); white-space: nowrap;
+    }
+
+    /* ── selettore luogo ── */
+    .location-bar {
+      display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .location-bar select {
+      flex: 1; min-width: 120px;
+      background: rgba(31, 41, 55, 0.8);
+      border: 1px solid rgba(148,163,184,0.3);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 13px; padding: 8px 10px;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239ca3af' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+    .location-bar select:disabled { opacity: 0.4; cursor: default; }
+    .location-bar select option { background: #1f2937; }
+
+    /* ── chips ── */
+    .label { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; min-height: 32px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border-radius: 999px;
+      font-size: 13px; font-weight: 500;
+    }
+    .chip-dot { width: 9px; height: 9px; border-radius: 999px; }
+    .chip.organico  { background: rgba(148,92,36,0.18);  color: #fb923c; border: 1px solid rgba(180,83,9,0.7); }
+    .chip.indiff    { background: rgba(15,23,42,0.7);     color: #94a3b8; border: 1px solid rgba(31,41,55,0.9); }
+    .chip.carta     { background: rgba(56,189,248,0.16);  color: #38bdf8; border: 1px solid rgba(56,189,248,0.7); }
+    .chip.plastica  { background: rgba(234,179,8,0.16);   color: #fbbf24; border: 1px solid rgba(234,179,8,0.7); }
+    .chip.vetro     { background: rgba(22,163,74,0.16);   color: #4ade80; border: 1px solid rgba(22,163,74,0.7); }
+    .chip.default   { background: rgba(100,100,100,0.2);  color: #d1d5db; border: 1px solid rgba(148,163,184,0.4); }
+
+    /* ── date row ── */
+    .date-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font-size: 12px; color: var(--muted); }
+    .note { font-size: 11px; color: var(--muted); min-height: 14px; }
+
+    /* ── empty / error state ── */
+    .state-msg { font-size: 14px; color: var(--muted); padding: 6px 0; }
+    .state-msg.red { color: #f87171; font-weight: 700; font-size: 18px; }
+
+    /* ── buttons ── */
+    .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 10px; }
+    .buttons button {
+      flex: 1; padding: 10px 12px; border-radius: 12px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      border: none; transition: 0.2s; color: #fff;
+    }
+    .buttons button:disabled { opacity: 0.35; cursor: default; }
+    .buttons button:nth-child(1) { background: #2563eb; }
+    .buttons button:nth-child(1):not(:disabled):hover { background: #1d4ed8; }
+    .buttons button:nth-child(2) { background: #16a34a; }
+    .buttons button:nth-child(2):not(:disabled):hover { background: #15803d; }
+    .buttons button:nth-child(3) { background: #d97706; }
+    .buttons button:nth-child(3):not(:disabled):hover { background: #b45309; }
+    .buttons button:nth-child(4) { background: #7c3aed; }
+    .buttons button:nth-child(4):not(:disabled):hover { background: #6d28d9; }
+
+    /* ── range output ── */
+    .range-output { margin-top: 14px; font-size: 14px; color: var(--muted); line-height: 1.8; }
+    .range-day { display: flex; gap: 8px; align-items: baseline; }
+    .range-day .day-label { min-width: 130px; font-size: 13px; }
+    .range-day .day-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .range-day .chip { padding: 2px 8px; font-size: 12px; }
+
+    /* ── footer ── */
+    .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 11px; color: var(--muted); }
+    .status { display: inline-flex; align-items: center; gap: 4px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+    .status-ok   { color: #22c55e; }
+    .status-warn { color: #f97316; }
+    .status-err  { color: #f87171; }
+    .status-load { color: #60a5fa; }
+
+    /* ── spinner ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block; width: 12px; height: 12px;
+      border: 2px solid rgba(148,163,184,0.3);
+      border-top-color: #60a5fa;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @media (prefers-color-scheme: light) {
+      body { background: radial-gradient(circle at top, #e5e7eb 0, #cbd5f5 55%); color: #020617; }
+      .card { background: rgba(255,255,255,0.98); border-color: rgba(148,163,184,0.5); }
+      .subtitle, .label, .date-row, .note, .footer, .state-msg { color: #6b7280; }
+      .location-bar select { background-color: #f3f4f6; color: #111827; border-color: rgba(0,0,0,0.15);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); }
+      .location-bar select option { background: #fff; color: #111; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="card">
+
+    <header class="header">
+      <div>
+        <div class="title">Raccolta rifiuti</div>
+        <div class="subtitle" id="todayLabel">Oggi: —</div>
+      </div>
+      <div class="badge-small" id="rangeLabel">—</div>
+    </header>
+
+    <!-- Selezione luogo -->
+    <div class="location-bar">
+      <select id="selProvincia" disabled>
+        <option value="">Provincia…</option>
+      </select>
+      <select id="selComune" disabled>
+        <option value="">Comune…</option>
+      </select>
+      <select id="selZona" disabled>
+        <option value="">Zona…</option>
+      </select>
+    </div>
+
+    <main>
+      <div class="label">Domani dovrai esporre:</div>
+      <div id="chipsContainer" class="chips"></div>
+      <div class="date-row">
+        <div id="tomorrowLabel">Domani: —</div>
+        <div id="isoLabel">Data: —</div>
+      </div>
+      <div class="note" id="noteLabel"></div>
+    </main>
+
+    <div class="buttons">
+      <button id="btnWeek"      onclick="showRange(7)"   disabled>Settimana</button>
+      <button id="btnTwoWeeks" onclick="showRange(14)"  disabled>2 Settimane</button>
+      <button id="btnMonth"    onclick="showRange(30)"  disabled>Mese</button>
+      <button id="btnFiveW"    onclick="showRange(35)"  disabled>5 Settimane</button>
+    </div>
+    <div id="rangeOutput" class="range-output"></div>
+
+    <footer class="footer">
+      <div id="status" class="status status-load">
+        <span class="spinner"></span>
+        <span id="statusText" style="margin-left:4px">Caricamento…</span>
+      </div>
+      <div class="badge-small" id="zonaLabel">—</div>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+// Sostituisci con l'URL del tuo Worker dopo il deploy
+const WORKER_URL = "https://raccolta-rifiuti.YOUR-NAME.workers.dev";
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const state = {
+  provincia: localStorage.getItem("provincia") || "",
+  comune:    localStorage.getItem("comune")    || "",
+  zona:      localStorage.getItem("zona")      || "",
+};
+
+// ─── DOM refs ─────────────────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function toISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function fmtIT(d) {
+  return d.toLocaleDateString("it-IT", { weekday:"long", day:"2-digit", month:"2-digit", year:"numeric" });
+}
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function chipClass(type) {
+  const t = type.toLowerCase();
+  if (t.includes("organico"))   return "organico";
+  if (t.includes("indifferenz")) return "indiff";
+  if (t.includes("carta"))      return "carta";
+  if (t.includes("plastica") || t.includes("metalli")) return "plastica";
+  if (t.includes("vetro"))      return "vetro";
+  return "default";
+}
+
+function makeChip(type) {
+  const div = document.createElement("div");
+  div.className = `chip ${chipClass(type)}`;
+  const dot = document.createElement("span");
+  dot.className = "chip-dot";
+  const lbl = document.createElement("span");
+  lbl.textContent = type;
+  div.appendChild(dot);
+  div.appendChild(lbl);
+  return div;
+}
+
+function setStatus(cls, text, spinner = false) {
+  const el = $("status");
+  el.className = `status ${cls}`;
+  el.innerHTML = spinner
+    ? `<span class="spinner"></span><span style="margin-left:4px">${text}</span>`
+    : `<span class="status-dot"></span><span>${text}</span>`;
+}
+
+function setButtons(enabled) {
+  ["btnWeek","btnTwoWeeks","btnMonth","btnFiveW"].forEach(id => {
+    $(id).disabled = !enabled;
+  });
+}
+
+// ─── FETCH helpers ────────────────────────────────────────────────────────────
+async function apiFetch(path) {
+  const res = await fetch(WORKER_URL + path);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  $("todayLabel").textContent   = "Oggi: " + cap(fmtIT(today));
+  $("tomorrowLabel").textContent = "Domani: " + cap(fmtIT(tomorrow));
+  $("isoLabel").textContent     = "Data: " + toISO(tomorrow);
+
+  // Carica province
+  try {
+    const data = await apiFetch("/api/province");
+    populateSelect($("selProvincia"), data.province, "slug", "name", "Provincia…");
+    $("selProvincia").disabled = false;
+
+    // Ripristina selezione salvata
+    if (state.provincia) {
+      $("selProvincia").value = state.provincia;
+      await onProvinciaChange(false);
+      if (state.comune) {
+        $("selComune").value = state.comune;
+        await onComuneChange(false);
+        if (state.zona) {
+          $("selZona").value = state.zona;
+          await loadTomorrow();
+        }
+      }
+    } else {
+      setStatus("status-warn", "Seleziona provincia");
+    }
+  } catch(e) {
+    setStatus("status-err", "Errore connessione");
+    console.error(e);
+  }
+}
+
+function populateSelect(sel, items, valKey, labelKey, placeholder) {
+  sel.innerHTML = `<option value="">${placeholder}</option>`;
+  items.forEach(item => {
+    const opt = document.createElement("option");
+    opt.value = item[valKey];
+    opt.textContent = item[labelKey];
+    sel.appendChild(opt);
+  });
+}
+
+// ─── EVENT HANDLERS ───────────────────────────────────────────────────────────
+$("selProvincia").addEventListener("change", () => onProvinciaChange(true));
+$("selComune").addEventListener("change",    () => onComuneChange(true));
+$("selZona").addEventListener("change",      () => {
+  state.zona = $("selZona").value;
+  localStorage.setItem("zona", state.zona);
+  if (state.zona) loadTomorrow();
+});
+
+async function onProvinciaChange(reset) {
+  state.provincia = $("selProvincia").value;
+  localStorage.setItem("provincia", state.provincia);
+
+  if (reset) {
+    state.comune = ""; state.zona = "";
+    localStorage.removeItem("comune"); localStorage.removeItem("zona");
+    $("selComune").innerHTML = "<option value=''>Comune…</option>";
+    $("selComune").disabled = true;
+    $("selZona").innerHTML = "<option value=''>Zona…</option>";
+    $("selZona").disabled = true;
+    clearMain();
+  }
+
+  if (!state.provincia) return;
+
+  try {
+    setStatus("status-load", "Carico comuni…", true);
+    const data = await apiFetch(`/api/comuni?provincia=${state.provincia}`);
+    populateSelect($("selComune"), data.comuni, "slug", "name", "Comune…");
+    $("selComune").disabled = false;
+    setStatus("status-warn", "Seleziona comune");
+  } catch(e) {
+    setStatus("status-err", "Errore comuni");
+  }
+}
+
+async function onComuneChange(reset) {
+  state.comune = $("selComune").value;
+  localStorage.setItem("comune", state.comune);
+
+  if (reset) {
+    state.zona = "";
+    localStorage.removeItem("zona");
+    $("selZona").innerHTML = "<option value=''>Zona…</option>";
+    $("selZona").disabled = true;
+    clearMain();
+  }
+
+  if (!state.comune) return;
+
+  try {
+    setStatus("status-load", "Carico zone…", true);
+    const data = await apiFetch(`/api/zone?provincia=${state.provincia}&comune=${state.comune}`);
+
+    if (data.zone.length === 1) {
+      // Comune con una sola zona: seleziona automaticamente
+      $("selZona").innerHTML = `<option value="${data.zone[0]}">${data.zone[0]}</option>`;
+      $("selZona").disabled = false;
+      state.zona = data.zone[0];
+      localStorage.setItem("zona", state.zona);
+      await loadTomorrow();
+    } else {
+      populateSelect($("selZona"), data.zone.map(z => ({slug:z, name:"Zona "+z})), "slug", "name", "Zona…");
+      $("selZona").disabled = false;
+      setStatus("status-warn", "Seleziona zona");
+    }
+  } catch(e) {
+    setStatus("status-err", "Errore zone");
+  }
+}
+
+// ─── LOAD TOMORROW ───────────────────────────────────────────────────────────
+async function loadTomorrow() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const iso = toISO(tomorrow);
+
+  try {
+    setStatus("status-load", "Carico calendario…", true);
+    const data = await apiFetch(
+      `/api/schedule?provincia=${state.provincia}&comune=${state.comune}&zona=${state.zona}&from=${iso}&to=${iso}`
+    );
+
+    $("zonaLabel").textContent = `${data.commoneName} · Zona ${state.zona}`;
+    $("rangeLabel").textContent = "—";
+    setButtons(true);
+
+    const types = data.schedule[iso] ?? [];
+    const container = $("chipsContainer");
+    container.innerHTML = "";
+
+    if (types.length === 0) {
+      const span = document.createElement("span");
+      span.className = "state-msg red";
+      span.textContent = "Nessun conferimento previsto";
+      container.appendChild(span);
+      $("noteLabel").textContent = "Nessuna raccolta domani per questa zona.";
+      setStatus("status-warn", "Nessuna raccolta domani");
+    } else {
+      types.forEach(t => container.appendChild(makeChip(t)));
+      $("noteLabel").textContent = "Ricorda di esporre i contenitori la sera precedente.";
+      setStatus("status-ok", "Calendario caricato");
+    }
+  } catch(e) {
+    setStatus("status-err", "Errore caricamento");
+    console.error(e);
+  }
+}
+
+// ─── RANGE VIEW ──────────────────────────────────────────────────────────────
+async function showRange(days) {
+  if (!state.provincia || !state.comune || !state.zona) return;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const from = toISO(today);
+  const end = new Date(today);
+  end.setDate(today.getDate() + days - 1);
+  const to = toISO(end);
+
+  const out = $("rangeOutput");
+  out.innerHTML = `<span class="spinner"></span>`;
+
+  try {
+    const data = await apiFetch(
+      `/api/schedule?provincia=${state.provincia}&comune=${state.comune}&zona=${state.zona}&from=${from}&to=${to}`
+    );
+
+    $("rangeLabel").textContent = `${from} → ${to}`;
+    out.innerHTML = "";
+
+    const d = new Date(from + "T00:00:00");
+    const last = new Date(to + "T00:00:00");
+
+    while (d <= last) {
+      const iso = toISO(d);
+      const types = data.schedule[iso] ?? [];
+      const row = document.createElement("div");
+      row.className = "range-day";
+
+      const lbl = document.createElement("span");
+      lbl.className = "day-label";
+      lbl.textContent = cap(d.toLocaleDateString("it-IT", { weekday:"short", day:"2-digit", month:"2-digit" }));
+      row.appendChild(lbl);
+
+      const chips = document.createElement("span");
+      chips.className = "day-chips";
+
+      if (types.length === 0) {
+        chips.innerHTML = `<span style="color:var(--muted);font-size:12px">—</span>`;
+      } else {
+        types.forEach(t => chips.appendChild(makeChip(t)));
+      }
+
+      row.appendChild(chips);
+      out.appendChild(row);
+      d.setDate(d.getDate() + 1);
+    }
+  } catch(e) {
+    out.innerHTML = `<span class="state-msg">Errore caricamento dati.</span>`;
+  }
+}
+
+// ─── CLEAR ───────────────────────────────────────────────────────────────────
+function clearMain() {
+  $("chipsContainer").innerHTML = "";
+  $("noteLabel").textContent = "";
+  $("rangeOutput").innerHTML = "";
+  $("rangeLabel").textContent = "—";
+  $("zonaLabel").textContent = "—";
+  setButtons(false);
+}
+
+// ─── START ────────────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
