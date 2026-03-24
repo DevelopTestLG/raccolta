@@ -67,6 +67,22 @@
     .location-bar select:disabled { opacity: 0.4; cursor: default; }
     .location-bar select option { background: #1f2937; }
 
+    /* ── banner ── */
+    .banner-wrap {
+      display: none;
+      margin-bottom: 14px;
+      border-radius: 16px;
+      overflow: hidden;
+      width: 100%;
+      aspect-ratio: 3 / 1;
+    }
+    .banner-wrap.visible { display: block; }
+    .banner-wrap a { display: block; width: 100%; height: 100%; }
+    .banner-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+
     /* ── chips ── */
     .label { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; min-height: 32px; }
@@ -169,6 +185,13 @@
       </select>
     </div>
 
+    <!-- Banner -->
+    <div class="banner-wrap" id="bannerWrap">
+      <a id="bannerLink" href="#" target="_blank" rel="noopener noreferrer">
+        <img id="bannerImg" src="" alt="" />
+      </a>
+    </div>
+
     <main>
       <div class="label">Domani dovrai esporre:</div>
       <div id="chipsContainer" class="chips"></div>
@@ -180,10 +203,10 @@
     </main>
 
     <div class="buttons">
-      <button id="btnWeek"      onclick="showRange(7)"   disabled>Settimana</button>
-      <button id="btnTwoWeeks" onclick="showRange(14)"  disabled>2 Settimane</button>
-      <button id="btnMonth"    onclick="showRange(30)"  disabled>Mese</button>
-      <button id="btnFiveW"    onclick="showRange(35)"  disabled>5 Settimane</button>
+      <button id="btnWeek"     onclick="showRange(7)"  disabled>Settimana</button>
+      <button id="btnTwoWeeks" onclick="showRange(14)" disabled>2 Settimane</button>
+      <button id="btnMonth"    onclick="showRange(30)" disabled>Mese</button>
+      <button id="btnFiveW"    onclick="showRange(35)" disabled>5 Settimane</button>
     </div>
     <div id="rangeOutput" class="range-output"></div>
 
@@ -199,21 +222,16 @@
 </div>
 
 <script>
-// ─── CONFIG ──────────────────────────────────────────────────────────────────
-// Sostituisci con l'URL del tuo Worker dopo il deploy
 const WORKER_URL = "https://raccoltarifiuti.claudia-piovesin96.workers.dev";
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
 const state = {
   provincia: localStorage.getItem("provincia") || "",
   comune:    localStorage.getItem("comune")    || "",
   zona:      localStorage.getItem("zona")      || "",
 };
 
-// ─── DOM refs ─────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 
-// ─── UTILS ───────────────────────────────────────────────────────────────────
 function toISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
@@ -224,11 +242,11 @@ function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 function chipClass(type) {
   const t = type.toLowerCase();
-  if (t.includes("organico"))   return "organico";
+  if (t.includes("organico"))    return "organico";
   if (t.includes("indifferenz")) return "indiff";
-  if (t.includes("carta"))      return "carta";
+  if (t.includes("carta"))       return "carta";
   if (t.includes("plastica") || t.includes("metalli")) return "plastica";
-  if (t.includes("vetro"))      return "vetro";
+  if (t.includes("vetro"))       return "vetro";
   return "default";
 }
 
@@ -258,31 +276,27 @@ function setButtons(enabled) {
   });
 }
 
-// ─── FETCH helpers ────────────────────────────────────────────────────────────
 async function apiFetch(path) {
   const res = await fetch(WORKER_URL + path);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
   const today = new Date();
   today.setHours(0,0,0,0);
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
-  $("todayLabel").textContent   = "Oggi: " + cap(fmtIT(today));
+  $("todayLabel").textContent    = "Oggi: " + cap(fmtIT(today));
   $("tomorrowLabel").textContent = "Domani: " + cap(fmtIT(tomorrow));
-  $("isoLabel").textContent     = "Data: " + toISO(tomorrow);
+  $("isoLabel").textContent      = "Data: " + toISO(tomorrow);
 
-  // Carica province
   try {
     const data = await apiFetch("/api/province");
     populateSelect($("selProvincia"), data.province, "slug", "name", "Provincia…");
     $("selProvincia").disabled = false;
 
-    // Ripristina selezione salvata
     if (state.provincia) {
       $("selProvincia").value = state.provincia;
       await onProvinciaChange(false);
@@ -313,10 +327,9 @@ function populateSelect(sel, items, valKey, labelKey, placeholder) {
   });
 }
 
-// ─── EVENT HANDLERS ───────────────────────────────────────────────────────────
 $("selProvincia").addEventListener("change", () => onProvinciaChange(true));
 $("selComune").addEventListener("change",    () => onComuneChange(true));
-$("selZona").addEventListener("change",      () => {
+$("selZona").addEventListener("change", () => {
   state.zona = $("selZona").value;
   localStorage.setItem("zona", state.zona);
   if (state.zona) loadTomorrow();
@@ -368,7 +381,6 @@ async function onComuneChange(reset) {
     const data = await apiFetch(`/api/zone?provincia=${state.provincia}&comune=${state.comune}`);
 
     if (data.zone.length === 1) {
-      // Comune con una sola zona: seleziona automaticamente
       $("selZona").innerHTML = `<option value="${data.zone[0]}">${data.zone[0]}</option>`;
       $("selZona").disabled = false;
       state.zona = data.zone[0];
@@ -384,13 +396,15 @@ async function onComuneChange(reset) {
   }
 }
 
-// ─── LOAD TOMORROW ───────────────────────────────────────────────────────────
 async function loadTomorrow() {
   const today = new Date();
   today.setHours(0,0,0,0);
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
   const iso = toISO(tomorrow);
+
+  // Carica banner e calendario in parallelo
+  loadBanner();
 
   try {
     setStatus("status-load", "Carico calendario…", true);
@@ -424,7 +438,31 @@ async function loadTomorrow() {
   }
 }
 
-// ─── RANGE VIEW ──────────────────────────────────────────────────────────────
+async function loadBanner() {
+  const wrap = $("bannerWrap");
+  const img  = $("bannerImg");
+  const link = $("bannerLink");
+
+  wrap.classList.remove("visible");
+
+  try {
+    const data = await apiFetch(
+      `/api/banner?provincia=${encodeURIComponent(state.provincia)}&comune=${encodeURIComponent(state.comune)}`
+    );
+
+    if (!data.banner || !data.banner.url) return;
+
+    img.alt  = data.banner.alt  || "";
+    link.href = data.banner.link || "#";
+    img.onload  = () => wrap.classList.add("visible");
+    img.onerror = () => wrap.classList.remove("visible");
+    img.src = data.banner.url;
+
+  } catch(e) {
+    wrap.classList.remove("visible");
+  }
+}
+
 async function showRange(days) {
   if (!state.provincia || !state.comune || !state.zona) return;
 
@@ -478,17 +516,16 @@ async function showRange(days) {
   }
 }
 
-// ─── CLEAR ───────────────────────────────────────────────────────────────────
 function clearMain() {
   $("chipsContainer").innerHTML = "";
   $("noteLabel").textContent = "";
   $("rangeOutput").innerHTML = "";
   $("rangeLabel").textContent = "—";
   $("zonaLabel").textContent = "—";
+  $("bannerWrap").classList.remove("visible");
   setButtons(false);
 }
 
-// ─── START ────────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", init);
 </script>
 </body>
