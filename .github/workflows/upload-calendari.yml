@@ -19,7 +19,7 @@ jobs:
           node-version: '20'
 
       - name: Installa dipendenze
-        run: npm ci
+        run: npm install
         working-directory: scripts
 
       - name: Converti e carica su KV
