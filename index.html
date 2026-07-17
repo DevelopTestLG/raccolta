@@ -680,7 +680,43 @@ document.addEventListener("DOMContentLoaded", init);
   .pwa-ios-step strong {
     color: #14161f;
   }
+
+  /* Pulsantino piccolo in alto a destra per riaprire le istruzioni iOS */
+  #pwa-help-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 9998;
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: none;
+    box-shadow: 0 6px 16px rgba(30, 40, 70, 0.16);
+    font-size: 18px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+
+  #pwa-help-btn.show {
+    display: flex;
+  }
+
+  #pwa-help-btn:active {
+    opacity: 0.85;
+  }
 </style>
+
+<!-- Pulsantino per riaprire le istruzioni di installazione su iOS -->
+<button id="pwa-help-btn" aria-label="Come installare l'app">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 3V15M12 15L7 10M12 15L17 10" stroke="#2f6fed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M4 17V19C4 20.1046 4.89543 21 6 21H18C19.1046 21 20 20.1046 20 19V17" stroke="#2f6fed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
 
 <div id="pwa-install-container">
   <div class="pwa-card">
@@ -715,6 +751,7 @@ document.addEventListener("DOMContentLoaded", init);
   const closeBtn = document.getElementById('pwa-close-btn');
   const iosSteps = document.getElementById('pwa-ios-steps');
   const subtitle = document.getElementById('pwa-subtitle');
+  const helpBtn = document.getElementById('pwa-help-btn');
 
   let deferredPrompt = null;
 
@@ -739,13 +776,22 @@ document.addEventListener("DOMContentLoaded", init);
   function showBanner() { container.classList.add('show'); }
   function hideBanner() { container.classList.remove('show'); }
 
-  if (isStandalone() || wasDismissedRecently()) {
-    // niente da mostrare
+  if (isStandalone()) {
+    // app già installata: nessun banner, nessun pulsantino
   } else if (isIOS()) {
     iosSteps.style.display = 'flex';
     subtitle.textContent = "Non è possibile installarla in automatico su iPhone, ma bastano pochi tocchi:";
     installBtn.style.display = 'none';
-    showBanner();
+
+    // Il pulsantino in alto a destra è sempre visibile su iOS (finché non è installata),
+    // così l'utente può riaprire le istruzioni quando vuole.
+    helpBtn.classList.add('show');
+
+    if (!wasDismissedRecently()) {
+      showBanner();
+    }
+  } else if (wasDismissedRecently()) {
+    // Android: se chiuso di recente, non mostrare nulla
   } else {
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -769,6 +815,11 @@ document.addEventListener("DOMContentLoaded", init);
     hideBanner();
   });
 
+  // Il pulsantino riapre sempre il banner con le istruzioni, ignorando il "chiuso di recente"
+  helpBtn.addEventListener('click', () => {
+    showBanner();
+  });
+
   window.addEventListener('appinstalled', () => {
     hideBanner();
     localStorage.setItem(DISMISS_KEY, Date.now().toString());
@@ -776,7 +827,7 @@ document.addEventListener("DOMContentLoaded", init);
 })();
 </script>
 
-
+  
   
   
 </body>
