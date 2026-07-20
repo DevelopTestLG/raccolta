@@ -526,21 +526,25 @@ function clearMain() {
   setButtons(false);
 }
 
- 
 document.addEventListener("DOMContentLoaded", init);
 </script>
 
-<!--
+
+
+  <!--
   ============================================================
   COMPONENTE: Banner/Bottone Installazione PWA
   Adattato allo stile grafico di "Raccolta rifiuti"
   ============================================================
-  - Card bianca, angoli molto arrotondati, ombra soffusa
-  - Titolo in grassetto scuro, sottotitolo grigio
-  - Bottone blu pieno (coerente con lo stile dei bottoni "Settimana" ecc.)
-  - Su Android/Chrome: bottone "Installa" -> prompt nativo
-  - Su iOS/Safari: istruzioni passo-passo (Condividi -> Aggiungi a Home)
-  - Se già installata: nessun banner
+  - Pulsantino fisso in alto a destra, sempre visibile (iOS + Android),
+    finché l'app non risulta già installata (in tal caso sparisce).
+  - Nessuna apertura automatica del banner: appare solo al click.
+  - Click su iOS -> mostra sempre il banner con le istruzioni manuali
+    (Condividi -> Aggiungi a Home), perché Apple non offre un prompt nativo.
+  - Click su Android -> se l'app è già installata non fa nulla; altrimenti
+    avvia direttamente il prompt nativo di installazione (o, se il prompt
+    non è ancora disponibile, mostra il banner col bottone "Installa app"
+    come fallback).
 
   COME USARLO:
   Incolla questo blocco prima della chiusura di </body> nel tuo sito.
@@ -571,7 +575,7 @@ document.addEventListener("DOMContentLoaded", init);
   }
 
   .pwa-card {
-    background: #f5f6f8;
+    background: #ffffff;
     color: #1f2430;
     border-radius: 24px;
     padding: 20px;
@@ -743,9 +747,6 @@ document.addEventListener("DOMContentLoaded", init);
 
 <script>
 (function () {
-  const DISMISS_KEY = 'pwaInstallBannerDismissed';
-  const RESHOW_AFTER_DAYS = 1;
-
   const container = document.getElementById('pwa-install-container');
   const installBtn = document.getElementById('pwa-install-btn');
   const closeBtn = document.getElementById('pwa-close-btn');
@@ -766,66 +767,80 @@ document.addEventListener("DOMContentLoaded", init);
     return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   }
 
-  function wasDismissedRecently() {
-    const dismissedAt = localStorage.getItem(DISMISS_KEY);
-    if (!dismissedAt) return false;
-    const daysPassed = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24);
-    return daysPassed < RESHOW_AFTER_DAYS;
-  }
-
   function showBanner() { container.classList.add('show'); }
   function hideBanner() { container.classList.remove('show'); }
 
-  if (isStandalone()) {
-    // app già installata: nessun banner, nessun pulsantino
-  } else if (isIOS()) {
-    iosSteps.style.display = 'flex';
-    subtitle.textContent = "Non è possibile installarla in automatico su iPhone, ma bastano pochi tocchi:";
-    installBtn.style.display = 'none';
+  // Cattura il prompt nativo di installazione su Android/Chrome/Edge, se disponibile
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
 
-    // Il pulsantino in alto a destra è sempre visibile su iOS (finché non è installata),
-    // così l'utente può riaprire le istruzioni quando vuole.
+  // Se l'app è già installata, nascondi definitivamente il pulsantino
+  if (isStandalone()) {
+    helpBtn.style.display = 'none';
+  } else {
+    // Su iOS e su Android il pulsantino è sempre visibile
     helpBtn.classList.add('show');
 
-    if (!wasDismissedRecently()) {
-      showBanner();
+    if (isIOS()) {
+      // Prepara il contenuto del banner in modalità "istruzioni iOS"
+      iosSteps.style.display = 'flex';
+      subtitle.textContent = "Non è possibile installarla in automatico su iPhone, ma bastano pochi tocchi:";
+      installBtn.style.display = 'none';
     }
-  } else if (wasDismissedRecently()) {
-    // Android: se chiuso di recente, non mostrare nulla
-  } else {
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      installBtn.style.display = 'block';
-      showBanner();
-    });
 
-    installBtn.addEventListener('click', async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log('PWA install outcome:', outcome);
-      deferredPrompt = null;
-      hideBanner();
+    helpBtn.addEventListener('click', async () => {
+      if (isIOS()) {
+        // iOS: mostra sempre il banner con le istruzioni manuali
+        showBanner();
+        return;
+      }
+
+      // Android/altro: se risulta già installata, non fare nulla
+      if (isStandalone()) {
+        return;
+      }
+
+      // Se il browser ha reso disponibile il prompt nativo, avvialo direttamente
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('PWA install outcome:', outcome);
+        deferredPrompt = null;
+      } else {
+        // Prompt non ancora disponibile (es. Firefox, o beforeinstallprompt non ancora arrivato):
+        // mostra il banner con il bottone "Installa app" come fallback
+        installBtn.style.display = 'block';
+        showBanner();
+      }
     });
   }
 
-  closeBtn.addEventListener('click', () => {
-    localStorage.setItem(DISMISS_KEY, Date.now().toString());
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('PWA install outcome:', outcome);
+    deferredPrompt = null;
     hideBanner();
   });
 
-  // Il pulsantino riapre sempre il banner con le istruzioni, ignorando il "chiuso di recente"
-  helpBtn.addEventListener('click', () => {
-    showBanner();
+  closeBtn.addEventListener('click', () => {
+    hideBanner();
   });
 
   window.addEventListener('appinstalled', () => {
     hideBanner();
-    localStorage.setItem(DISMISS_KEY, Date.now().toString());
+    helpBtn.style.display = 'none';
   });
 })();
 </script>
+
+
+
+
+
 
   
   
